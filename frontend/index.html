@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DocsVerse AI — Intelligent Document Analysis & Coding</title>
+  
+  <!-- Favicon & Brand Icons -->
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon.png">
+  <link rel="shortcut icon" href="assets/favicon.png">
+  <link rel="apple-touch-icon" href="assets/favicon.png">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Highlight.js styles for code blocks (Atom One Dark theme) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-theme">
+  <div class="app-layout">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <div class="brand-logo">
+            <img src="assets/favicon.png" alt="DocsVerse AI Logo" class="brand-logo-img">
+          </div>
+          <span class="brand-name">DocsVerse</span>
+          <span class="brand-badge">AI</span>
+        </div>
+        <button class="icon-btn mobile-close-btn" id="closeSidebarBtn" title="Close Sidebar" aria-label="Close sidebar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="sidebar-actions">
+        <button class="new-chat-btn" id="newChatBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>New Chat</span>
+        </button>
+      </div>
+
+      <div class="sidebar-section-title">
+        <span>Chat History</span>
+      </div>
+
+      <div class="history-list" id="historyList">
+        <!-- Rendered dynamically from localStorage -->
+      </div>
+
+      <div class="sidebar-footer">
+        <button class="clear-chat-btn" id="clearAllHistoryBtn" title="Clear All History">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          <span>Clear All History</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Chat Workspace -->
+    <main class="chat-workspace">
+      <!-- Top Header -->
+      <header class="top-bar">
+        <div class="top-bar-left">
+          <button class="icon-btn sidebar-toggle-btn" id="openSidebarBtn" title="Toggle Sidebar" aria-label="Toggle sidebar">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <div class="header-title-wrapper">
+            <h1 class="header-title">DocsVerse AI</h1>
+            <span class="header-subtitle">Multi-format Document Intelligence</span>
+          </div>
+        </div>
+
+        <div class="top-bar-right">
+          <!-- Active Model Dynamic Indicator -->
+          <div class="model-badge-container" id="modelBadgeContainer" title="Active Model: DocVerse AK-1.3 (Proprietary Architecture by Amar Kumar)">
+            <span class="pulse-dot" id="modelStatusDot"></span>
+            <span class="model-label">Model:</span>
+            <span class="model-name" id="currentModelName">DocVerse AK-1.3</span>
+          </div>
+
+          <!-- Dynamic Token Usage Counter Badge -->
+          <div class="token-badge-container" id="tokenBadgeContainer" title="Tokens used in current interaction">
+            <svg class="token-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+            </svg>
+            <span class="token-label">Tokens:</span>
+            <span class="token-counter" id="tokenCounter">0</span>
+          </div>
+
+          <!-- Modern Animated Theme Switcher Toggle -->
+          <button class="top-bar-btn theme-switcher-btn" id="themeSwitcherBtn" title="Switch Theme (Dark, Light, Oceanic Midnight, Sunset Glow)" aria-label="Cycle application theme">
+            <span class="theme-icon-slot" id="themeIconSlot">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+            </span>
+            <span class="theme-name-display" id="themeNameDisplay">Dark</span>
+            <span class="theme-cycle-indicator">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Chat Thread Area -->
+      <div class="chat-thread" id="chatThread">
+        <!-- Initial Welcome State with Suggestions -->
+        <div class="welcome-screen" id="welcomeScreen">
+          <div class="welcome-hero-container">
+            <img src="assets/logo.png" alt="DocVerse AI - Your Documents, Smarter Insights, Brighter Ideas" class="welcome-hero-logo">
+          </div>
+          <p class="welcome-tagline">Upload documents, analyze data, and generate code with local AI failover routing.</p>
+
+          <div class="suggestions-grid">
+            <button class="suggestion-card" data-prompt="Summarize the key findings and tables from my attached PDF document.">
+              <div class="suggestion-icon">📄</div>
+              <div class="suggestion-text">
+                <span class="suggestion-title">Summarize a PDF</span>
+                <span class="suggestion-desc">Extract key insights, dates, and takeaways</span>
+              </div>
+            </button>
+
+            <button class="suggestion-card" data-prompt="Write a production-ready Python script with error handling and typing.">
+              <div class="suggestion-icon">🐍</div>
+              <div class="suggestion-text">
+                <span class="suggestion-title">Write a Python Script</span>
+                <span class="suggestion-desc">Generate modular code with markdown blocks</span>
+              </div>
+            </button>
+
+            <button class="suggestion-card" data-prompt="Analyze the attached Excel spreadsheet. Provide column trends and anomalies.">
+              <div class="suggestion-icon">📊</div>
+              <div class="suggestion-text">
+                <span class="suggestion-title">Analyze Excel Data</span>
+                <span class="suggestion-desc">Identify formulas, trends, and summary metrics</span>
+              </div>
+            </button>
+
+            <button class="suggestion-card" data-prompt="Explain quantum computing principles with analogies and simple examples.">
+              <div class="suggestion-icon">💡</div>
+              <div class="suggestion-text">
+                <span class="suggestion-title">Explain a Complex Topic</span>
+                <span class="suggestion-desc">Break down intricate concepts clearly</span>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input Area Sandbox -->
+      <footer class="input-sandbox">
+        <!-- Attached File Preview Chip -->
+        <div class="attached-file-tray" id="fileTray" style="display: none;">
+          <div class="file-chip" id="fileChip">
+            <span class="file-chip-icon" id="fileChipIcon">📎</span>
+            <div class="file-chip-info">
+              <span class="file-chip-name" id="fileChipName">document.pdf</span>
+              <span class="file-chip-size" id="fileChipSize">1.2 MB</span>
+            </div>
+            <button class="file-chip-remove" id="removeFileBtn" title="Remove attachment" aria-label="Remove attached file">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="upload-progress-bar" id="uploadProgressBar" style="display: none;"></div>
+        </div>
+
+        <div class="input-box-container">
+          <!-- Hidden File Input -->
+          <input 
+            type="file" 
+            id="fileInput" 
+            class="hidden-file-input" 
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.png,.jpg,.jpeg,.webp,.gif,.txt,.md,.json,.py,.js"
+          >
+
+          <!-- Attach Button -->
+          <button class="icon-btn attach-btn" id="attachBtn" title="Attach Document (PDF, Word, Excel, PPT, Image)" aria-label="Attach Document">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+            </svg>
+          </button>
+
+          <!-- Prompt Textarea -->
+          <textarea 
+            id="promptInput" 
+            class="prompt-textarea" 
+            rows="1" 
+            placeholder="Ask DocsVerse AI anything, or attach a document..."
+          ></textarea>
+
+          <!-- Voice Input Mic Button -->
+          <button type="button" class="icon-btn mic-btn" id="micBtn" title="Voice Typing (Click to Speak)" aria-label="Voice Typing">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+              <line x1="8" y1="23" x2="16" y2="23"></line>
+            </svg>
+            <span class="mic-wave-ring"></span>
+          </button>
+
+          <!-- Send / Stop Button -->
+          <button class="send-btn" id="sendBtn" title="Send message" aria-label="Send message">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </div>
+
+        <div class="input-disclaimer">
+          AI can make mistakes. Please verify important information. • Proudly engineered under AMAR SMART INDIA.
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <!-- Premium PDF Generating Animation Modal Overlay -->
+  <div class="pdf-modal-overlay" id="pdfModalOverlay" style="display: none;" aria-hidden="true">
+    <div class="pdf-modal-backdrop"></div>
+    <div class="pdf-modal-card">
+      <div class="pdf-modal-ambient-glow"></div>
+      <div class="pdf-spinner-container">
+        <div class="pdf-spinner-ring"></div>
+        <div class="pdf-spinner-center">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <path d="M12 18v-6"></path>
+            <path d="m9 15 3 3 3-3"></path>
+          </svg>
+        </div>
+      </div>
+      <h3 class="pdf-modal-title">Generating PDF...</h3>
+      <p class="pdf-modal-subtitle" id="pdfModalSubtitle">Compiling report and formatting pages...</p>
+      
+      <div class="pdf-progress-track">
+        <div class="pdf-progress-fill" id="pdfProgressBar"></div>
+      </div>
+
+      <div class="pdf-modal-footer-tag">
+        <span class="pdf-shield-icon">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+        </span>
+        <span class="pdf-status-text">Zero Server Storage • 100% Client-Side Engine</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Client-Side PDF Generation Engine (html2pdf with jsPDF + html2canvas) -->
+  <script src="html2pdf.bundle.min.js"></script>
+  <script>
+    if (!window.html2pdf) {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>');
+    }
+  </script>
+
+  <!-- Markdown Parser and Syntax Highlighter CDNs with reliable local fallbacks -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/sql.min.js"></script>
+
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>

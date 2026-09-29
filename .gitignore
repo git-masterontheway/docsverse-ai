@@ -1,30 +1,20 @@
-# Virtual Environments
-venv/
-*/venv/
-env/
+# Dependencies
+node_modules/
 .venv/
+__pycache__/
+*.pyc
 
-# Sensitive credentials & Google authentication cookies
-ai_integration/gemini-auth.json
-*.cookie*
+# Environment Files
 .env
 .env.local
-.env.*.local
+*.env
 
-# Python bytecode and caches
-__pycache__/
-*/__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.pytest_cache/
+# Uploads and temporary data
+backend/uploads/*
+!backend/uploads/.gitkeep
 
-# OS and Editor files
+# IDE and OS
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
-
-# Local logs & scratch
-*.log
-scratch/

@@ -1,0 +1,3 @@
+# Python PDF Generation Dependencies for DocsVerse AI
+reportlab>=4.0.0
+pillow>=10.0.0

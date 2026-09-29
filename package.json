@@ -1,16 +1,16 @@
 {
   "name": "docverse-ai",
   "version": "1.0.0",
-  "description": "DocVerse AI Studio - Full-stack AI workspace powered by Gemini Web2API",
+  "description": "DocsVerse AI - Intelligent Multi-Document Analysis, Coding & Generation Platform",
+  "main": "backend/server.js",
   "scripts": {
-    "start": "powershell -ExecutionPolicy Bypass -Command \".\\venv\\Scripts\\python.exe ai_integration/gemini_web2api.py\""
+    "start": "node backend/server.js",
+    "dev": "node --watch backend/server.js",
+    "build": "cd backend && npm install && (pip install -r requirements.txt || pip3 install -r requirements.txt || python3 -m pip install -r requirements.txt || true)"
   },
-  "keywords": [
-    "ai",
-    "gemini",
-    "chat",
-    "document-ai"
-  ],
-  "author": "git-masterontheway",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "Amar Smart India",
   "license": "MIT"
 }

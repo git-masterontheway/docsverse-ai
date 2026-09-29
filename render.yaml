@@ -1,14 +1,18 @@
 services:
   - type: web
     name: docverse-ai
-    runtime: python
-    buildCommand: pip install -r ai_integration/requirements.txt
-    startCommand: python ai_integration/gemini_web2api.py
-    healthCheckPath: /health
+    env: node
+    plan: free
+    buildCommand: cd backend && npm install && (pip install -r requirements.txt || pip3 install -r requirements.txt || true)
+    startCommand: node backend/server.js
+    healthCheckPath: /api/health
+    autoDeploy: true
     envVars:
-      - key: PORT
-        value: 10000
-      - key: HOST
-        value: 0.0.0.0
-      - key: GEMINI_COOKIE
+      - key: NODE_ENV
+        value: production
+      - key: OPENROUTER_API_KEY
         sync: false
+      - key: OPENROUTER_MODEL
+        value: google/gemini-2.0-flash-001
+      - key: REPORTLAB_PDF_ENGINE
+        value: "true"

@@ -1,0 +1,33 @@
+{
+  "name": "docsverse-ai-backend",
+  "version": "1.0.0",
+  "description": "Production-ready backend for DocsVerse AI with multi-format document parsing and LiteLLM gateway integration",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "build": "pip install -r requirements.txt || pip3 install -r requirements.txt || python3 -m pip install -r requirements.txt || true"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "docsverse",
+    "ai",
+    "pdf-parse",
+    "litellm",
+    "document-ai"
+  ],
+  "author": "DocsVerse AI Team",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mammoth": "^1.8.0",
+    "multer": "^1.4.5-lts.1",
+    "officeparser": "^5.1.1",
+    "pdf-parse": "^1.1.1",
+    "xlsx": "^0.18.5"
+  }
+}

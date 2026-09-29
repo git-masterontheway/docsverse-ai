@@ -1,14 +1,23 @@
 @echo off
-title DocVerse AI - Local Server
+title DocsVerse AI - Server Runner
+echo =====================================================================
+echo                 DocsVerse AI - Production-Ready Runner
+echo =====================================================================
+echo.
+
 cd /d "%~dp0"
-echo ========================================================
-echo   Starting DocVerse AI Local Server on http://localhost:8081
-echo ========================================================
-if exist "venv\Scripts\python.exe" (
-    venv\Scripts\python.exe ai_integration\gemini_web2api.py
-) else if exist "..\venv\Scripts\python.exe" (
-    ..\venv\Scripts\python.exe ai_integration\gemini_web2api.py
-) else (
-    python ai_integration\gemini_web2api.py
+
+REM 1. Check if backend dependencies are installed
+if not exist "backend\node_modules" (
+    echo [+] Installing Node.js backend dependencies...
+    cd backend
+    call npm install
+    cd ..
 )
+
+echo [+] Launching DocsVerse AI Server (Port 5000)...
+start "" http://localhost:5000
+cd backend
+node server.js
+
 pause
