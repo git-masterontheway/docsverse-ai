@@ -151,7 +151,11 @@ function buildMessagesPayload(messages, documentData) {
  * Call OpenRouter with streaming, retrying through the free models pool if a model is unavailable or rate-limited.
  */
 async function streamChatCompletion({ messages, documentData, model, onChunk, onMetadata, onDone, onError }) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  let apiKey = (process.env.OPENROUTER_API_KEY || '').trim();
+  // Auto-strip surrounding quotes if user wrapped key in quotes in .env
+  if ((apiKey.startsWith('"') && apiKey.endsWith('"')) || (apiKey.startsWith("'") && apiKey.endsWith("'"))) {
+    apiKey = apiKey.slice(1, -1).trim();
+  }
 
   if (!apiKey || apiKey.includes('your_')) {
     const err = new Error('OPENROUTER_API_KEY is missing. Please configure your key in backend/.env.');
@@ -212,6 +216,13 @@ async function streamChatCompletion({ messages, documentData, model, onChunk, on
           const jsonErr = JSON.parse(errorText);
           parsedMessage = jsonErr.error?.message || jsonErr.message || errorText;
         } catch (e) {}
+
+        if (response.status === 401) {
+          console.error(`[OpenRouter Auth Error] API Key rejected (${parsedMessage}).`);
+          lastError = new Error(`Invalid or expired OpenRouter API Key (HTTP 401: ${parsedMessage}). Please create a fresh key at https://openrouter.ai/keys and update your OPENROUTER_API_KEY in backend/.env or Render.`);
+          break; // Stop immediately since key is unauthorized
+        }
+
         console.warn(`[OpenRouter] Model ${currentModel} failed (HTTP ${response.status}: ${parsedMessage}). Trying next free model...`);
         lastError = new Error(`HTTP ${response.status}: ${parsedMessage}`);
         continue; // Try next model in pool
