@@ -82,12 +82,18 @@ const SYSTEM_PROMPT = `You are DocsVerse AI. Follow these core behavioral rules 
   * Conclude with a brief note that the interactive PDF document is ready to download via the DocVerse PDF Card.`;
 
 const OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
+const GEMINI_OPENAI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
 
-// High-performing free model fallback chain on OpenRouter
-const FREE_MODELS_POOL = [
-  'inclusionai/ling-3.0-flash-sante:free',
-  'nvidia/nemotron-3-super-120b-a12b:free',
-  'liquid/lfm-2.5-2.6b:free',
+// Verified, high-reliability free and low-latency models
+const ROBUST_MODELS_POOL = [
+  'google/gemini-2.0-flash-lite-preview-02-05:free',
+  'meta-llama/llama-3.3-70b-instruct:free',
+  'deepseek/deepseek-r1:free',
+  'deepseek/deepseek-chat:free',
+  'qwen/qwen-2.5-coder-32b-instruct:free',
+  'mistralai/mistral-small-24b-instruct-2501:free',
+  'openrouter/auto',
   'openrouter/free'
 ];
 
@@ -148,30 +154,63 @@ function buildMessagesPayload(messages, documentData) {
 }
 
 /**
- * Call OpenRouter with streaming, retrying through the free models pool if a model is unavailable or rate-limited.
+ * Call AI Provider with streaming, auto-detecting key format and retrying across robust fallback models.
  */
 async function streamChatCompletion({ messages, documentData, model, onChunk, onMetadata, onDone, onError }) {
-  let apiKey = (process.env.OPENROUTER_API_KEY || '').trim();
-  // Auto-strip surrounding quotes if user wrapped key in quotes in .env
+  let apiKey = (
+    process.env.OPENROUTER_API_KEY ||
+    process.env.OPEN_ROUTER_API_KEY ||
+    process.env.GEMINI_API_KEY ||
+    process.env.GROQ_API_KEY ||
+    process.env.API_KEY ||
+    ''
+  ).trim();
+
+  // Auto-strip surrounding quotes if user wrapped key in quotes in .env or dashboard
   if ((apiKey.startsWith('"') && apiKey.endsWith('"')) || (apiKey.startsWith("'") && apiKey.endsWith("'"))) {
     apiKey = apiKey.slice(1, -1).trim();
   }
 
-  if (!apiKey || apiKey.includes('your_')) {
-    const err = new Error('OPENROUTER_API_KEY is missing. Please configure your key in backend/.env.');
+  if (!apiKey || apiKey.includes('your_') || apiKey.includes('placeholder')) {
+    const err = new Error('API key is missing or unconfigured. Please add OPENROUTER_API_KEY in backend/.env or Render Environment Variables.');
     if (onError) {
-      onError(err, { name: 'OpenRouter', model: 'openrouter/free' });
+      onError(err, { name: 'AMAR SMART INDIA', model: 'DocVerse AK-1.3' });
       return;
     }
     throw err;
   }
 
+  // Detect Provider & Endpoint
+  let targetEndpoint = OPENROUTER_ENDPOINT;
+  let defaultModel = process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001';
+  let providerType = 'openrouter';
+
+  if (apiKey.startsWith('AIzaSy') || process.env.GEMINI_API_KEY) {
+    targetEndpoint = GEMINI_OPENAI_ENDPOINT;
+    defaultModel = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+    providerType = 'gemini';
+  } else if (apiKey.startsWith('gsk_') || process.env.GROQ_API_KEY) {
+    targetEndpoint = GROQ_ENDPOINT;
+    defaultModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+    providerType = 'groq';
+  }
+
   const preparedMessages = buildMessagesPayload(messages, documentData);
 
-  // Determine models to try (user-selected model first, then fallback chain)
-  const modelsToTry = (model && model !== 'free:best')
-    ? [model, ...FREE_MODELS_POOL.filter(m => m !== model)]
-    : FREE_MODELS_POOL;
+  // Build model priority chain
+  const modelsToTry = [];
+  if (model && model !== 'free:best' && model !== 'default') {
+    modelsToTry.push(model);
+  }
+  if (defaultModel && !modelsToTry.includes(defaultModel)) {
+    modelsToTry.push(defaultModel);
+  }
+
+  if (providerType === 'openrouter') {
+    for (const m of ROBUST_MODELS_POOL) {
+      if (!modelsToTry.includes(m)) modelsToTry.push(m);
+    }
+  }
 
   let promptChars = 0;
   for (const m of preparedMessages) {
@@ -181,6 +220,8 @@ async function streamChatCompletion({ messages, documentData, model, onChunk, on
 
   let lastError = null;
   let activeModelUsed = modelsToTry[0];
+
+  const refererUrl = process.env.RENDER_EXTERNAL_URL || 'https://docsverse-ai.onrender.com';
 
   for (const currentModel of modelsToTry) {
     activeModelUsed = currentModel;
@@ -195,12 +236,12 @@ async function streamChatCompletion({ messages, documentData, model, onChunk, on
         temperature: 0.7
       };
 
-      const response = await fetch(OPENROUTER_ENDPOINT, {
+      const response = await fetch(targetEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
-          'HTTP-Referer': 'http://localhost:5000',
+          'HTTP-Referer': refererUrl,
           'X-Title': 'DocsVerse AI'
         },
         body: JSON.stringify(requestBody),
