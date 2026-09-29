@@ -1228,8 +1228,13 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast('PDF compiled by Python ReportLab! Ready to download.', 'success');
 
     } catch (err) {
-      console.error('Intelligent PDF error:', err);
-      showToast('PDF Generation failed: ' + err.message, 'info');
+      console.warn('Backend ReportLab PDF failed, falling back to client-side PDF engine:', err);
+      if (window.html2pdf) {
+        showToast('Generating document via Client-Side PDF engine...', 'info');
+        await generateClientSidePdf(contentToExport, filename, targetRow);
+      } else {
+        showToast('PDF Generation failed: ' + err.message, 'info');
+      }
     } finally {
       clearTimeout(timer1);
       setTimeout(() => {
@@ -1239,6 +1244,57 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (progressBar) progressBar.style.width = '30%';
       }, 350);
+    }
+  }
+
+  /**
+   * Client-Side PDF Generation using html2pdf.js (Resilient Zero-Dependency Fallback)
+   */
+  async function generateClientSidePdf(markdownText, filename, targetRow) {
+    const safeFilename = filename || 'DocVerse_Document.pdf';
+    const container = document.createElement('div');
+    container.style.padding = '28px 34px';
+    container.style.color = '#1e293b';
+    container.style.background = '#ffffff';
+    container.style.fontFamily = "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif";
+    container.style.fontSize = '12px';
+    container.style.lineHeight = '1.6';
+
+    const parsedHtml = window.marked ? marked.parse(markdownText) : `<p>${escapeHtml(markdownText)}</p>`;
+    container.innerHTML = `
+      <div style="border-bottom: 2px solid #6366f1; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h1 style="font-size: 22px; color: #1e1b4b; margin: 0; font-weight: 700;">DocsVerse AI</h1>
+          <p style="font-size: 11px; color: #64748b; margin: 4px 0 0 0;">Intelligent Document Intelligence & Coding Report</p>
+        </div>
+        <div style="text-align: right; font-size: 10px; color: #94a3b8;">
+          <p style="margin: 0;">Date: ${new Date().toLocaleDateString()}</p>
+          <p style="margin: 2px 0 0 0; color: #6366f1; font-weight: 600;">AMAR SMART INDIA</p>
+        </div>
+      </div>
+      <div class="pdf-rendered-body" style="color: #334155; font-size: 12px;">
+        ${parsedHtml}
+      </div>
+      <div style="margin-top: 36px; border-top: 1px solid #e2e8f0; padding-top: 10px; display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8;">
+        <span>DocsVerse AI • Client-Side Export</span>
+        <span>Engineered under AMAR SMART INDIA</span>
+      </div>
+    `;
+
+    const opt = {
+      margin: [10, 10, 12, 10],
+      filename: safeFilename.toLowerCase().endsWith('.pdf') ? safeFilename : safeFilename + '.pdf',
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    try {
+      await html2pdf().set(opt).from(container).save();
+      showToast(`Downloaded ${opt.filename}!`, 'success');
+    } catch (e) {
+      console.error('Client-side PDF failed:', e);
+      showToast('Client PDF export failed: ' + e.message, 'info');
     }
   }
 

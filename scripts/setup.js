@@ -24,29 +24,65 @@ try {
 }
 
 // 2. Install Python ReportLab PDF dependencies
-console.log('[2/2] Installing Python PDF generator dependencies...');
-const pipCommands = [
-  `pip install -r "${reqFile}"`,
-  `pip3 install -r "${reqFile}"`,
-  `python3 -m pip install -r "${reqFile}"`,
-  `python -m pip install -r "${reqFile}"`
-];
+console.log('[2/2] Installing Python ReportLab PDF generator dependencies...');
 
 let pythonInstalled = false;
-for (const cmd of pipCommands) {
-  try {
-    execSync(cmd, { stdio: 'pipe' });
+const isWin = process.platform === 'win32';
+const venvDir = path.join(backendDir, '.venv');
+const venvPython = isWin
+  ? path.join(venvDir, 'Scripts', 'python.exe')
+  : path.join(venvDir, 'bin', 'python');
+const venvPip = isWin
+  ? path.join(venvDir, 'Scripts', 'pip.exe')
+  : path.join(venvDir, 'bin', 'pip');
+
+// Strategy 1: Create/use dedicated .venv in backend/.venv (bypasses PEP 668 on Debian/Ubuntu/Render)
+try {
+  if (!fs.existsSync(venvPython)) {
+    console.log('  [*] Creating Python virtual environment in backend/.venv...');
+    const pythonExe = isWin ? 'python' : 'python3';
+    execSync(`${pythonExe} -m venv "${venvDir}"`, { stdio: 'inherit' });
+  }
+
+  if (fs.existsSync(venvPip)) {
+    console.log('  [*] Installing ReportLab into backend/.venv...');
+    try {
+      execSync(`"${venvPip}" install --upgrade pip`, { stdio: 'ignore' });
+    } catch (_) {}
+    execSync(`"${venvPip}" install -r "${reqFile}"`, { stdio: 'inherit' });
     pythonInstalled = true;
-    console.log(`  [+] Python dependencies installed via: ${cmd}`);
-    break;
-  } catch (e) {
-    // Continue to next pip candidate
+    console.log('  [+] ReportLab successfully installed into backend/.venv!');
+  }
+} catch (venvErr) {
+  console.log('  [i] Notice: Virtual environment creation failed, trying system pip strategies...');
+}
+
+// Strategy 2: System pip with --break-system-packages (standard for Render / Debian 12 / Ubuntu 24)
+if (!pythonInstalled) {
+  const pipCandidates = [
+    `pip3 install --break-system-packages -r "${reqFile}"`,
+    `python3 -m pip install --break-system-packages -r "${reqFile}"`,
+    `pip install --break-system-packages -r "${reqFile}"`,
+    `pip3 install --user -r "${reqFile}"`,
+    `pip3 install -r "${reqFile}"`,
+    `pip install -r "${reqFile}"`
+  ];
+
+  for (const cmd of pipCandidates) {
+    try {
+      console.log(`  [*] Trying: ${cmd}`);
+      execSync(cmd, { stdio: 'inherit' });
+      pythonInstalled = true;
+      console.log(`  [+] ReportLab installed via: ${cmd}`);
+      break;
+    } catch (e) {
+      // try next
+    }
   }
 }
 
 if (!pythonInstalled) {
-  console.log('  [i] Notice: Python pip not detected on global PATH.');
-  console.log('      If running locally with venv, PDF generation will use .venv automatically.');
+  console.log('  [i] Notice: Python ReportLab was not installed. Server will offer client-side PDF fallback.');
 }
 
 console.log('------------------------------------------------------------');
