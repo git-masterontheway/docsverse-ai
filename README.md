@@ -77,12 +77,13 @@ Open **[http://localhost:5000](http://localhost:5000)** in your browser.
 4. Add your `OPENROUTER_API_KEY` under Environment Variables.
 
 ### Option B: Manual Web Service
-- **Build Command**: `cd backend && npm install && (pip install -r requirements.txt || pip3 install -r requirements.txt || true)`
-- **Start Command**: `node backend/server.js`
+- **Build Command**: `npm run build` (or default `npm install`)
+- **Start Command**: `node backend/server.js` (or `npm start`)
 - **Health Check Path**: `/api/health`
 - **Environment Variables**:
   - `NODE_ENV`: `production`
   - `OPENROUTER_API_KEY`: `<your-key>`
+  - `OPENROUTER_MODEL`: `google/gemini-2.0-flash-001` (optional default)
 
 ---
 
