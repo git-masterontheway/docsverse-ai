@@ -6,6 +6,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   // DOM Elements
   const sidebar = document.getElementById('sidebar');
+  const sidebarBackdrop = document.getElementById('sidebarBackdrop');
   const openSidebarBtn = document.getElementById('openSidebarBtn');
   const closeSidebarBtn = document.getElementById('closeSidebarBtn');
   const newChatBtn = document.getElementById('newChatBtn');
@@ -41,6 +42,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const pdfModalSubtitle = document.getElementById('pdfModalSubtitle');
   const pdfProgressBar = document.getElementById('pdfProgressBar');
   const toastContainer = document.getElementById('toastContainer');
+
+  // API Key Configuration Modal Elements
+  const apiKeyConfigBtn = document.getElementById('apiKeyConfigBtn');
+  const apiKeyBtnText = document.getElementById('apiKeyBtnText');
+  const apiKeyModalOverlay = document.getElementById('apiKeyModalOverlay');
+  const closeApiKeyModalBtn = document.getElementById('closeApiKeyModalBtn');
+  const apiKeyStatusBanner = document.getElementById('apiKeyStatusBanner');
+  const modalStatusDot = document.getElementById('modalStatusDot');
+  const modalStatusText = document.getElementById('modalStatusText');
+  const customApiKeyInput = document.getElementById('customApiKeyInput');
+  const toggleKeyVisibilityBtn = document.getElementById('toggleKeyVisibilityBtn');
+  const clearApiKeyBtn = document.getElementById('clearApiKeyBtn');
+  const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
 
   // Application Theme Switcher Configuration
   const THEMES = [
@@ -105,6 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Application State
   const STORAGE_KEY = 'docsverse_chat_history_v1';
   const DOC_STORAGE_KEY = 'docsverse_session_document';
+  const API_KEY_STORAGE = 'docsverse_custom_api_key';
   const PROPRIETARY_MODEL_NAME = 'DocVerse AK-1.3';
   let conversations = loadConversations();
   let currentChatId = null;
@@ -113,6 +128,16 @@ document.addEventListener('DOMContentLoaded', () => {
   let isStreaming = false;
   let abortController = null;
   let stopVoiceTyping = () => {};
+  let isBackendConfigured = false;
+
+  // Stored Client API Key Helper
+  function getStoredApiKey() {
+    try {
+      return (localStorage.getItem(API_KEY_STORAGE) || '').trim();
+    } catch (e) {
+      return '';
+    }
+  }
 
   // Configure Marked.js
   if (window.marked) {
@@ -122,11 +147,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Mobile drawer closer helper
+  function closeSidebarMobile() {
+    if (window.innerWidth <= 768) {
+      if (sidebar) sidebar.classList.remove('open');
+      if (sidebarBackdrop) sidebarBackdrop.classList.remove('active');
+    }
+  }
+
   // Initialize
   initApp();
 
   function initApp() {
     setupThemeSwitcher();
+    setupApiKeyModal();
     setupEventListeners();
     setupVoiceInput();
     renderHistoryList();
@@ -138,19 +172,138 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // =========================================================================
+  // API Key Modal Setup & Handlers
+  // =========================================================================
+  function setupApiKeyModal() {
+    if (apiKeyConfigBtn) {
+      apiKeyConfigBtn.addEventListener('click', openApiKeyModal);
+    }
+    if (closeApiKeyModalBtn) {
+      closeApiKeyModalBtn.addEventListener('click', closeApiKeyModal);
+    }
+
+    if (apiKeyModalOverlay) {
+      apiKeyModalOverlay.addEventListener('click', (e) => {
+        if (e.target === apiKeyModalOverlay || e.target.classList.contains('api-modal-backdrop')) {
+          closeApiKeyModal();
+        }
+      });
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && apiKeyModalOverlay && apiKeyModalOverlay.style.display === 'flex') {
+        closeApiKeyModal();
+      }
+    });
+
+    if (toggleKeyVisibilityBtn && customApiKeyInput) {
+      toggleKeyVisibilityBtn.addEventListener('click', () => {
+        const isPass = customApiKeyInput.type === 'password';
+        customApiKeyInput.type = isPass ? 'text' : 'password';
+        toggleKeyVisibilityBtn.setAttribute('title', isPass ? 'Hide API key' : 'Show API key');
+      });
+    }
+
+    if (saveApiKeyBtn && customApiKeyInput) {
+      saveApiKeyBtn.addEventListener('click', () => {
+        const rawKey = (customApiKeyInput.value || '').trim().replace(/^["']|["']$/g, '');
+        if (!rawKey) {
+          showToast('Please paste a valid API key (OpenRouter or Google Gemini)', 'warning');
+          customApiKeyInput.focus();
+          return;
+        }
+
+        try {
+          localStorage.setItem(API_KEY_STORAGE, rawKey);
+          showToast('API Key saved and activated successfully!', 'success');
+          closeApiKeyModal();
+          fetchActiveModel();
+        } catch (err) {
+          showToast('Could not save API key to local storage', 'error');
+        }
+      });
+    }
+
+    if (clearApiKeyBtn && customApiKeyInput) {
+      clearApiKeyBtn.addEventListener('click', () => {
+        try {
+          localStorage.removeItem(API_KEY_STORAGE);
+          customApiKeyInput.value = '';
+          showToast('Saved API Key removed from browser', 'info');
+          closeApiKeyModal();
+          fetchActiveModel();
+        } catch (err) {
+          console.error(err);
+        }
+      });
+    }
+  }
+
+  function openApiKeyModal() {
+    if (!apiKeyModalOverlay) return;
+    const currentKey = getStoredApiKey();
+    if (customApiKeyInput) {
+      customApiKeyInput.value = currentKey;
+    }
+    updateModalStatusDisplay(currentKey);
+    apiKeyModalOverlay.style.display = 'flex';
+    if (customApiKeyInput) {
+      setTimeout(() => customApiKeyInput.focus(), 120);
+    }
+  }
+
+  function closeApiKeyModal() {
+    if (apiKeyModalOverlay) {
+      apiKeyModalOverlay.style.display = 'none';
+    }
+  }
+
+  function updateModalStatusDisplay(savedKey) {
+    if (!modalStatusDot || !modalStatusText) return;
+    if (savedKey) {
+      modalStatusDot.style.background = 'var(--status-online)';
+      modalStatusDot.style.boxShadow = '0 0 8px var(--status-online)';
+      modalStatusText.innerHTML = `<strong>Custom Key Active:</strong> Key is saved securely in your browser storage.`;
+    } else if (isBackendConfigured) {
+      modalStatusDot.style.background = 'var(--status-online)';
+      modalStatusDot.style.boxShadow = '0 0 8px var(--status-online)';
+      modalStatusText.innerHTML = `<strong>Server Environment Key Active:</strong> Backend has an active key configured.`;
+    } else {
+      modalStatusDot.style.background = 'var(--status-warning)';
+      modalStatusDot.style.boxShadow = '0 0 8px var(--status-warning)';
+      modalStatusText.innerHTML = `<strong>No Active Key:</strong> Paste your OpenRouter or Gemini key below to activate AI responses.`;
+    }
+  }
+
+  // =========================================================================
   // Event Listeners
   // =========================================================================
   function setupEventListeners() {
-    // Sidebar toggling
+    // Sidebar mobile drawer toggling
     if (openSidebarBtn) {
-      openSidebarBtn.addEventListener('click', () => sidebar.classList.add('open'));
+      openSidebarBtn.addEventListener('click', () => {
+        sidebar.classList.add('open');
+        if (sidebarBackdrop) sidebarBackdrop.classList.add('active');
+      });
     }
     if (closeSidebarBtn) {
-      closeSidebarBtn.addEventListener('click', () => sidebar.classList.remove('open'));
+      closeSidebarBtn.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        if (sidebarBackdrop) sidebarBackdrop.classList.remove('active');
+      });
+    }
+    if (sidebarBackdrop) {
+      sidebarBackdrop.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        sidebarBackdrop.classList.remove('active');
+      });
     }
 
     // New Chat & Clear
-    newChatBtn.addEventListener('click', () => startNewChat(true));
+    newChatBtn.addEventListener('click', () => {
+      startNewChat(true);
+      closeSidebarMobile();
+    });
     clearAllHistoryBtn.addEventListener('click', clearAllHistory);
 
     // Prompt Input Auto-expansion & Enter key
@@ -217,25 +370,49 @@ document.addEventListener('DOMContentLoaded', () => {
   // Gateway & Active Model Integration
   // =========================================================================
   async function fetchActiveModel() {
+    const savedKey = getStoredApiKey();
     try {
-      const res = await fetch(`${API_BASE}/api/models`);
+      const headers = {};
+      if (savedKey) {
+        headers['x-api-key'] = savedKey;
+      }
+      const res = await fetch(`${API_BASE}/api/models`, { headers });
       if (res.ok) {
         const data = await res.json();
+        isBackendConfigured = !!data.configured;
         updateActiveModelDisplay(PROPRIETARY_MODEL_NAME, 'AMAR SMART INDIA');
 
         if (data.configured) {
-          modelStatusDot.style.backgroundColor = 'var(--status-online)';
-          modelStatusDot.style.boxShadow = '0 0 8px var(--status-online)';
+          if (modelStatusDot) {
+            modelStatusDot.style.backgroundColor = 'var(--status-online)';
+            modelStatusDot.style.boxShadow = '0 0 8px var(--status-online)';
+          }
+          if (apiKeyConfigBtn) {
+            apiKeyConfigBtn.classList.remove('needs-key');
+          }
+          if (apiKeyBtnText) {
+            apiKeyBtnText.textContent = savedKey ? 'Key: Saved ✓' : 'API Active';
+          }
         } else {
-          modelStatusDot.style.backgroundColor = 'var(--status-warning)';
-          modelStatusDot.style.boxShadow = '0 0 8px var(--status-warning)';
+          if (modelStatusDot) {
+            modelStatusDot.style.backgroundColor = 'var(--status-warning)';
+            modelStatusDot.style.boxShadow = '0 0 8px var(--status-warning)';
+          }
+          if (apiKeyConfigBtn) {
+            apiKeyConfigBtn.classList.add('needs-key');
+          }
+          if (apiKeyBtnText) {
+            apiKeyBtnText.textContent = 'Set API Key ⚠️';
+          }
         }
       } else {
         throw new Error('Models endpoint error');
       }
     } catch (e) {
       currentModelName.textContent = PROPRIETARY_MODEL_NAME;
-      modelStatusDot.style.backgroundColor = 'var(--status-online)';
+      if (modelStatusDot) {
+        modelStatusDot.style.backgroundColor = 'var(--status-online)';
+      }
     }
   }
 
@@ -534,14 +711,21 @@ document.addEventListener('DOMContentLoaded', () => {
     setSendButtonState(true);
     abortController = new AbortController();
 
+    const savedKey = getStoredApiKey();
+    const chatHeaders = { 'Content-Type': 'application/json' };
+    if (savedKey) {
+      chatHeaders['x-api-key'] = savedKey;
+    }
+
     try {
       const response = await fetch(`${API_BASE}/api/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: chatHeaders,
         body: JSON.stringify({
           messages: currentMessages.slice(0, -1).map(m => ({ role: m.role, content: m.content })),
           documentData: currentDoc,
           fileId: currentDoc?.id,
+          apiKey: savedKey || undefined,
           stream: true
         }),
         signal: abortController.signal
@@ -1665,6 +1849,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function loadConversationById(id) {
     const conv = conversations.find(c => c.id === id);
     if (!conv) return;
+
+    closeSidebarMobile();
 
     currentChatId = conv.id;
     currentMessages = [...conv.messages];

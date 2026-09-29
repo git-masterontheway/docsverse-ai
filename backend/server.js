@@ -11,7 +11,25 @@ const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
 const { execFile } = require('child_process');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+// Load environment variables from all standard locations:
+// 1. backend/.env (local dev)
+// 2. root .env (local / container root)
+// 3. /etc/secrets/.env (Render Secret Files mount path)
+// 4. Current working directory .env
+const envCandidatePaths = [
+  path.join(__dirname, '.env'),
+  path.join(__dirname, '../.env'),
+  '/etc/secrets/.env',
+  path.resolve('.env')
+];
+for (const envP of envCandidatePaths) {
+  try {
+    if (fs.existsSync(envP)) {
+      require('dotenv').config({ path: envP, override: false });
+    }
+  } catch (_) {}
+}
+require('dotenv').config(); // Fallback
 
 const { parseDocument } = require('./documentParser');
 const { streamChatCompletion, getActiveProviderInfo } = require('./aiService');
@@ -111,7 +129,8 @@ const upload = multer({
 
 // 1. Health Endpoint
 app.get('/api/health', (req, res) => {
-  const info = getActiveProviderInfo();
+  const clientKey = req.headers['x-api-key'] || req.query.apiKey;
+  const info = getActiveProviderInfo(clientKey);
   res.json({
     status: 'healthy',
     name: 'DocsVerse AI Backend',
@@ -124,7 +143,8 @@ app.get('/api/health', (req, res) => {
 
 // 2. Models Endpoint
 app.get('/api/models', (req, res) => {
-  const info = getActiveProviderInfo();
+  const clientKey = req.headers['x-api-key'] || req.query.apiKey;
+  const info = getActiveProviderInfo(clientKey);
   res.json({
     success: true,
     provider: info.provider,
@@ -184,7 +204,8 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 
 // 4. Chat Completion & Streaming Route
 app.post('/api/chat', async (req, res) => {
-  const { messages = [], documentData, fileId, model } = req.body;
+  const { messages = [], documentData, fileId, model, apiKey: bodyApiKey } = req.body;
+  const clientApiKey = req.headers['x-api-key'] || bodyApiKey;
 
   if (!messages || messages.length === 0) {
     return res.status(400).json({ error: 'Messages array is required.' });
@@ -213,6 +234,7 @@ app.post('/api/chat', async (req, res) => {
       messages,
       documentData: docPayload,
       model,
+      clientApiKey,
       onMetadata: (meta) => {
         res.write(`data: ${JSON.stringify({ type: 'metadata', ...meta })}\n\n`);
       },

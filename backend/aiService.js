@@ -156,8 +156,9 @@ function buildMessagesPayload(messages, documentData) {
 /**
  * Call AI Provider with streaming, auto-detecting key format and retrying across robust fallback models.
  */
-async function streamChatCompletion({ messages, documentData, model, onChunk, onMetadata, onDone, onError }) {
+async function streamChatCompletion({ messages, documentData, model, clientApiKey, onChunk, onMetadata, onDone, onError }) {
   let apiKey = (
+    clientApiKey ||
     process.env.OPENROUTER_API_KEY ||
     process.env.OPEN_ROUTER_API_KEY ||
     process.env.GEMINI_API_KEY ||
@@ -172,7 +173,7 @@ async function streamChatCompletion({ messages, documentData, model, onChunk, on
   }
 
   if (!apiKey || apiKey.includes('your_') || apiKey.includes('placeholder')) {
-    const err = new Error('API key is missing or unconfigured. Please add OPENROUTER_API_KEY in backend/.env or Render Environment Variables.');
+    const err = new Error('API key is missing or unconfigured. Please click "API Key" in the top bar to connect your key, or set OPENROUTER_API_KEY in Render.');
     if (onError) {
       onError(err, { name: 'AMAR SMART INDIA', model: 'DocVerse AK-1.3' });
       return;
@@ -356,9 +357,17 @@ async function streamChatCompletion({ messages, documentData, model, onChunk, on
 /**
  * Status and active provider metadata
  */
-function getActiveProviderInfo() {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  const hasKey = !!(apiKey && !apiKey.includes('your_') && apiKey.trim() !== '');
+function getActiveProviderInfo(clientApiKey) {
+  const apiKey = (
+    clientApiKey ||
+    process.env.OPENROUTER_API_KEY ||
+    process.env.OPEN_ROUTER_API_KEY ||
+    process.env.GEMINI_API_KEY ||
+    process.env.GROQ_API_KEY ||
+    process.env.API_KEY ||
+    ''
+  ).trim();
+  const hasKey = !!(apiKey && !apiKey.includes('your_') && !apiKey.includes('placeholder') && apiKey !== '');
 
   return {
     provider: 'AMAR SMART INDIA',
